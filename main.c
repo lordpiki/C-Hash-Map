@@ -46,10 +46,7 @@ struct pair {
 uint32_t rotate(uint32_t value, uint32_t rotations)
 {
     // Making sure the rotations don't overflow the max amount
-    rotations = rotations % 32;
-    uint32_t rotated_num = value << rotations;
-    rotated_num |= value >> (32 - rotations);
-    return rotated_num;
+    return (value << rotations) | (value >> (32 - rotations));
 }
 
 // Scramble functions, will perform the operations for Murmur hashing with c1,c2 and rotations
@@ -88,7 +85,7 @@ uint32_t hash(char *key, uint32_t seed)
     uint32_t len = strlen(key);
     // Seperate the keys into 4 bytes chunks
     // Multiply and rotate the each chunk
-    for (uint32_t i = 0; i < len; i+= 4)  
+    for (uint32_t i = 0; i < len - len % 4; i+= 4)  
     {
         uint32_t k = get_chunk(key + i, 4);
         hash = scramble(hash, k);
@@ -98,15 +95,13 @@ uint32_t hash(char *key, uint32_t seed)
     
     // Check if there are any remaining bytes, if no, continue, if yes, follow the next step
     // For the remaining bytes, shift the the required amount and then scramble
-    if (len % 4)
-    {
-        uint32_t k = get_chunk(key + len - len % 4, len % 4);
-        hash = scramble(hash, k);
-    }
+    uint32_t k = 0; 
+    k = get_chunk(key + len - len % 4, len % 4);
+    hash = scramble(hash, k); 
  
-    hash ^= len;
 
     // Final Avalanche
+    hash ^= len;
     hash ^= (hash >> 16);
     hash *= 0x85ebca6b;
     hash ^= (hash >> 13);
@@ -209,6 +204,10 @@ struct hashmap *init_map() {
 
 int main() {
   printf("Hello, World!\n");
-  printf("%" PRIu32, hash("test", 0x9747b28c));
+  printf("%" PRIu32 "\n", hash("Hello, world!", 0));
+  printf("%" PRIu32 "\n", hash("Hello, world!", 0x9747b28c));
+  printf("%" PRIu32 "\n", hash("The quick brown fox jumps over the lazy dog", 0));
+  printf("%" PRIu32 "\n", hash("The quick brown fox jumps over the lazy dog", 0x9747b28c));
+  
   return 0;
 }
