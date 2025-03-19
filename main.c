@@ -4,13 +4,17 @@
 #include <string.h> 
 
 #define DEFAULT_CAPACITY 16
+#define LOAD_MAX 0.75
+
 
 // Map of strings to int
 struct hashmap {
     // Array of pointers to the first element of the linked list of key-value pairs 
     struct pair** pairs;
     int size;
+    int entries;
 };
+
 
 // Key-value pair linked list
 struct pair {
@@ -67,9 +71,21 @@ void insert(struct hashmap* map, char* key, int value)
     if (NULL == p)
     {
         struct pair* new_pair = create_pair(key, value, p);
+        map->entries++;
         return;
     }
     p->value = value;
+}
+
+bool check_load(struct hashmap* map)
+{ 
+    return (float) map->entries / map->size > LOAD_MAX;
+}
+
+void resize(struct hashmap* map)
+{
+    struct pair** new = (pair**)malloc(sizeof(pair**));
+    
 }
 
 int get(struct hashmap* map, char* key)
@@ -90,10 +106,11 @@ int get(struct hashmap* map, char* key)
 // Returns a pointer to the map
 struct hashmap* init_map() 
 {
-    // TODO
+
     struct hashmap* map = (struct hashmap*)malloc(sizeof(struct hashmap*));
     map->size = DEFAULT_CAPACITY;
-    map->pairs = NULL;
+    map->pairs = (struct pair**)malloc(sizeof(struct pair**));
+    map->entries = 0;
     return map;
 }
 
