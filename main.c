@@ -46,12 +46,9 @@ struct pair {
 uint32_t rotate(uint32_t value, uint32_t rotations)
 {
     // Making sure the rotations don't overflow the max amount
-    rotations = rotations % sizeof(int);
-
-    uint32_t rotated_num = 0;
-    rotated_num = value >> (sizeof(int) - rotations);
-    rotated_num |= value << rotations;
-
+    rotations = rotations % 32;
+    uint32_t rotated_num = value << rotations;
+    rotated_num |= value >> (32 - rotations);
     return rotated_num;
 }
 
@@ -65,7 +62,18 @@ uint32_t scramble(uint32_t hash, uint32_t k)
     k *= c1; 
     k = rotate(k, 15);
     k *= c2;
-    return hash ^ k;
+    hash ^= k;
+    return hash;
+}
+
+uint32_t get_chunk(char* start, int bytes)
+{
+    uint32_t chunk = 0;
+    for (int i = 0; i < bytes; i++)
+    {
+        chunk |= start[i] << (i * 8);
+    }
+    return chunk;
 }
 
 // Hash function
@@ -82,7 +90,8 @@ uint32_t hash(char *key, uint32_t seed)
     // Multiply and rotate the each chunk
     for (uint32_t i = 0; i < len; i+= 4)  
     {
-        hash = scramble(hash, key[i]);
+        uint32_t k = get_chunk(key + i, 4);
+        hash = scramble(hash, k);
         hash = rotate(hash, 13);
         hash = hash * m + n;
     }
@@ -91,25 +100,19 @@ uint32_t hash(char *key, uint32_t seed)
     // For the remaining bytes, shift the the required amount and then scramble
     if (len % 4)
     {
-        uint32_t k = key[len - (len % 4)] >> 1;
-        switch (len % 4)
-        {
-            case 1: k = k << 16; break;
-            case 2: k = k << 8; break;
-            case 3: break;
-        }
+        uint32_t k = get_chunk(key + len - len % 4, len % 4);
         hash = scramble(hash, k);
     }
-    
+ 
+    hash ^= len;
+
     // Final Avalanche
     hash ^= (hash >> 16);
     hash *= 0x85ebca6b;
-    hash ^= hash >> 13;
+    hash ^= (hash >> 13);
     hash *= 0xc2b2ae35;
     hash ^= (hash >> 16);
     
-    // Final step
-    hash ^= len;
     return hash;
 }
 
@@ -206,6 +209,6 @@ struct hashmap *init_map() {
 
 int main() {
   printf("Hello, World!\n");
-  printf("%" PRIu32, hash("abcde", 123));
+  printf("%" PRIu32, hash("test", 0x9747b28c));
   return 0;
 }
