@@ -1,10 +1,26 @@
-#include <cstddef>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> 
+#include <stdbool.h>
 
 #define DEFAULT_CAPACITY 16
 #define LOAD_MAX 0.75
+
+// Declartion of structs
+struct hashmap;
+struct pair;
+
+
+// Declartion of functions
+int hash(char* key);
+int get_index(char* key, int size);
+struct pair* find_pair(struct pair* first, char* key);
+struct pair* create_pair(char* key, int value, struct pair* next);
+void insert(struct hashmap* map, char* key, int value);
+bool check_load(struct hashmap* map);
+void resize(struct hashmap* map);
+int get(struct hashmap* map, char* key);
+struct hashmap* init_map();
 
 
 // Map of strings to int
@@ -25,6 +41,7 @@ struct pair {
 
 // Hash function
 // Returns the hash of the key
+// Uses murmur3 hash function
 int hash(char* key)
 {
     // TODO
@@ -35,8 +52,7 @@ int hash(char* key)
 // Returns the index of the key based on the hash
 int get_index(char* key, int size)
 {
-    // TODO
-    return 0;
+    return hash(key) % size;
 }
 
 // Go over the linked list and return the pair struct
@@ -70,8 +86,13 @@ void insert(struct hashmap* map, char* key, int value)
     struct pair* p = find_pair(map->pairs[index], key);
     if (NULL == p)
     {
-        struct pair* new_pair = create_pair(key, value, p);
+        struct pair* new_pair = create_pair(key, value, map->pairs[index]);
         map->entries++;
+        map->pairs[index] = new_pair;
+        if (check_load(map))
+        {
+            resize(map);
+        }
         return;
     }
     p->value = value;
@@ -84,16 +105,34 @@ bool check_load(struct hashmap* map)
 
 void resize(struct hashmap* map)
 {
-    struct pair** new = (pair**)malloc(sizeof(pair**));
-    
+    // Create a new hashmap with double the size
+    map->size *= 2;
+    struct pair** new = (struct pair**)malloc(map->size * sizeof(struct pair**));
+    struct pair** old = map->pairs; 
+    // Go over the old map and rehash all the entries
+    for (int i = 0; i < map->size / 2; i++)
+    {
+        struct pair* curr = old[i];
+        while (NULL != curr)
+        {
+            struct pair* next = curr->next;
+            // Get the new index and insert into the new map
+            int index = get_index(curr->key, map->size);
+            curr->next = new[index];
+            new[index] = curr;
+            curr = next;
+        }
+    }
+    free(old);
+    map->pairs = new;
 }
 
 int get(struct hashmap* map, char* key)
 {
-    // TODO
     // Get pair of the key, and return the value
     int index = get_index(key, map->size);
     struct pair* p = find_pair(map->pairs[index], key);
+    // Return NULL if not found
     if (NULL == p)
     {
         return NULL;
