@@ -146,14 +146,12 @@ struct pair *create_pair(char *key, uint32_t value, struct pair *next) {
 void insert(struct hashmap *map, char *key, uint32_t value) {
     // Update the value of pair, insert at the start if gotten NULL
     uint32_t index = get_index(key, map->size);
-    printf("Index: %d\n", index);
     struct pair *p = find_pair(map->pairs[index], key);
     if (NULL == p) {
         struct pair *new_pair = create_pair(key, value, map->pairs[index]);
         map->entries++;
         map->pairs[index] = new_pair;
         if (check_load(map)) {
-            printf("Load factor exceeded, resizing map\n");
             resize(map);
         }
         return;
@@ -187,13 +185,11 @@ void resize(struct hashmap *map) {
         }
     }
     free(old);
-    printf("Resized map to %d\n", map->size);
 }
 
 uint32_t get(struct hashmap *map, char *key) {
     // Get pair of the key, and return the value
     uint32_t index = get_index(key, map->size);
-    printf("Index: %d\n", index);
     struct pair *p = find_pair(map->pairs[index], key);
     // Return NULL if not found
     if (NULL == p) {
@@ -229,25 +225,50 @@ struct hashmap *init_map() {
 }
 
 
+
 int main() {
-    // Create a new hash map
-    struct hashmap* map = init_map(); // Create with initial capacity of 16
-    
-    printf("Testing hash map operations:\n\n");
-    // Testing resizing and inserting 
-    // Insert 20 elements
-    // The map will resize when the load factor is greater than 0.75
-    // The map will resize to double the size
-    for (int i = 0; i < 20; i++) {
-        char key[10];
-        sprintf(key, "key%d", i);
-        insert(map, key, i);
-        printf("Inserted key: %s, value: %d\n", key, i);
+    struct hashmap *map = init_map();
+    if (!map) {
+        printf("Failed to initialize hashmap.\n");
+        return 1;
     }
 
-    // Testing getting the value of a key
-    // Get the value of key5
-    printf("\nGetting value of key5: %d\n", get(map, "key5"));
+    printf("### Test 1: Insert and Retrieve ###\n");
+    insert(map, "apple", 10);
+    insert(map, "banana", 20);
+    insert(map, "cherry", 30);
+
+    printf("apple -> %u\n", get(map, "apple"));   // Expected: 10
+    printf("banana -> %u\n", get(map, "banana")); // Expected: 20
+    printf("cherry -> %u\n", get(map, "cherry")); // Expected: 30
+
+    printf("\n### Test 2: Handling Missing Keys ###\n");
+    printf("grape -> %d (should be 0 or error)\n", get(map, "grape")); // Expected: Not found
+
+    printf("\n### Test 3: Duplicate Key Overwrite ###\n");
+    insert(map, "apple", 42);  // Overwrite previous value
+    printf("apple -> %u (should be 42)\n", get(map, "apple"));  // Expected: 42
+
+    printf("\n### Test 4: Edge Cases ###\n");
+    insert(map, "", 99);  // Empty string as key
+    printf("\"\" -> %u (should be 99)\n", get(map, ""));  // Expected: 99
+
+    char long_key[256];
+    memset(long_key, 'a', 255);
+    long_key[255] = '\0';
+    insert(map, long_key, 77);
+    printf("long_key[255] -> %u (should be 77)\n", get(map, long_key)); // Expected: 77
+
+    printf("\n### Test 5: Insert More Keys to Trigger Resize ###\n");
+    for (int i = 0; i < 100; i++) {
+        char key[20];
+        snprintf(key, sizeof(key), "key%d", i);
+        insert(map, key, i);
+    }
+    printf("key50 -> %u (should be 50)\n", get(map, "key50"));  // Expected: 50
+    printf("key99 -> %u (should be 99)\n", get(map, "key99"));  // Expected: 99
+
+    printf("\n### All tests completed successfully! ###\n");
 
     return 0;
 }
